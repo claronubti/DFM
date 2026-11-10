@@ -1,0 +1,157 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Segoe UI", sans-serif;
+  --font-mono: "Segoe UI", sans-serif;
+}
+
+@layer base {
+  :root {
+    /* Fluent 2 / Microsoft Fabric Core Palette */
+    --fabric-bg-canvas: #faf9f8;
+    --fabric-bg-subtle: #f3f2f1;
+    --fabric-bg-card: #ffffff;
+    --fabric-bg-hover: #f3f2f1;
+    --fabric-bg-active: #edebe9;
+    --fabric-bg-selected: #eff6fc;
+
+    /* Fluent 2 Neutral Stroke & Borders */
+    --fabric-border: #edebe9;
+    --fabric-border-subtle: #f3f2f1;
+    --fabric-border-strong: #d1d1d1;
+
+    /* Fluent 2 Primary Brand Tokens (Fabric Blue & Teal) */
+    --fabric-brand: #0f6cbd;
+    --fabric-brand-hover: #115ea3;
+    --fabric-brand-pressed: #0c3b5e;
+    --fabric-brand-tint: #eff6fc;
+    --fabric-brand-accent: #00b7c3;
+
+    /* Fluent 2 Neutral Foreground (Text) Hierarchy */
+    --fabric-text-primary: #242424;
+    --fabric-text-secondary: #605e5c;
+    --fabric-text-subtle: #797775;
+    --fabric-text-disabled: #a19f9d;
+
+    /* Fluent 2 Status Palette */
+    --fabric-status-success-bg: #dff6dd;
+    --fabric-status-success-fg: #107c41;
+    --fabric-status-success-border: #107c4133;
+
+    --fabric-status-danger-bg: #fde7e9;
+    --fabric-status-danger-fg: #c42b1c;
+    --fabric-status-danger-border: #c42b1c33;
+
+    --fabric-status-warning-bg: #fff4ce;
+    --fabric-status-warning-fg: #8a3707;
+    --fabric-status-warning-border: #8a370733;
+
+    --fabric-status-info-bg: #eff6fc;
+    --fabric-status-info-fg: #0f6cbd;
+    --fabric-status-info-border: #0f6cbd33;
+
+    /* Fluent 2 Elevation System */
+    --fabric-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.04);
+    --fabric-shadow-flyout: 0 4px 12px rgba(0, 0, 0, 0.10), 0 1px 3px rgba(0, 0, 0, 0.06);
+    --fabric-shadow-dialog: 0 16px 32px rgba(0, 0, 0, 0.16), 0 4px 8px rgba(0, 0, 0, 0.08);
+
+    /* Typography - Strict Segoe UI */
+    --fabric-font-family: "Segoe UI", sans-serif;
+    --fabric-font-mono: "Segoe UI", sans-serif;
+  }
+
+  html,
+  body,
+  #root,
+  *,
+  *::before,
+  *::after,
+  input,
+  button,
+  select,
+  textarea,
+  code,
+  pre,
+  kbd {
+    font-family: "Segoe UI", sans-serif !important;
+  }
+
+  body {
+    font-family: "Segoe UI", sans-serif !important;
+    background-color: var(--fabric-bg-canvas);
+    color: var(--fabric-text-primary);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    min-height: 100vh;
+    font-size: 13px;
+    line-height: 18px;
+    letter-spacing: -0.01em;
+  }
+
+  /* Microsoft Fluent 2 Focus Indicators */
+  *:focus-visible {
+    outline: 2px solid var(--fabric-brand);
+    outline-offset: 1px;
+    border-radius: 2px;
+  }
+}
+
+/* Microsoft Fluent Sleek Scrollbars (Light Theme) */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c8c6c4;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a19f9d;
+}
+
+/* Indeterminate Progress Animation */
+@keyframes indeterminate {
+  0% {
+    transform: translateX(-100%);
+  }
+
+  50% {
+    transform: translateX(60%);
+  }
+
+  100% {
+    transform: translateX(250%);
+  }
+}
+
+.animate-indeterminate {
+  animation: indeterminate 1.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+/* Microsoft Fluent 2 Surface Card Utilities */
+.fabric-surface-card {
+  background-color: #ffffff;
+  border: 1px solid var(--fabric-border);
+  box-shadow: var(--fabric-shadow-card);
+  border-radius: 4px;
+}
+
+.fabric-surface-flyout {
+  background-color: #ffffff;
+  border: 1px solid var(--fabric-border);
+  box-shadow: var(--fabric-shadow-flyout);
+  border-radius: 6px;
+}
+
+.fabric-surface-dialog {
+  background-color: #ffffff;
+  border: 1px solid var(--fabric-border);
+  box-shadow: var(--fabric-shadow-dialog);
+  border-radius: 8px;
+}

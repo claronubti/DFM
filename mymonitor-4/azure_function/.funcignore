@@ -1,0 +1,9 @@
+.git*
+.vscode
+__pycache__
+venv
+.venv
+tests
+*.pyc
+local.settings.json
+test_verify.py

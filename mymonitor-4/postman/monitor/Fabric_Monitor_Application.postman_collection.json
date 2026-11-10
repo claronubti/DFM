@@ -1,0 +1,1749 @@
+{
+  "info": {
+    "name": "Microsoft Fabric Real-Time Monitoring Hub API",
+    "_postman_id": "fabric-monitor-api-collection-v2",
+    "description": "Enterprise End-to-End Postman API Collection for Microsoft Fabric Real-Time Monitoring Hub.\nFeatures:\n- Authentication & RBAC (Admin, L1, L2)\n- Microsoft Entra ID Directory Search\n- Admin Setup & Domain SLA Configuration\n- Workspaces, Master & Sub-Pipeline Catalogs\n- Adaptive Poller & On-Demand Run Triggers\n- Continuous SLA Tracking, Multi-Tier Alerting & Auto-Resolution\n- Azure OpenAI GPT-4o Error Diagnostics\n- Lakehouse/Warehouse Delta Table Telemetry & SQL Endpoints\n- WebSocket Live Streaming",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "00. Health & System Diagnostics",
+      "item": [
+        {
+          "name": "1. System Health Check",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health"
+              ]
+            },
+            "description": "Verifies service health, tenant info, and leased poller state."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Health status is healthy', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql('healthy');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2. Service Welcome Root",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                ""
+              ]
+            },
+            "description": "Returns welcome banner and API documentation route when static dist is unmounted."
+          }
+        }
+      ]
+    },
+    {
+      "name": "01. Authentication & User Profiles",
+      "item": [
+        {
+          "name": "1. Admin Login (Password Auth)",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "username",
+                  "value": "{{adminEmail}}",
+                  "type": "text"
+                },
+                {
+                  "key": "password",
+                  "value": "{{adminPassword}}",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/jwt/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "jwt",
+                "login"
+              ]
+            },
+            "description": "Authenticates operator credentials and returns JWT access + refresh tokens. Automatically sets {{token}} and {{refreshToken}} environment variables."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Login Successful (200)', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "const json = pm.response.json();",
+                  "if (json.access_token) {",
+                  "    pm.environment.set('token', json.access_token);",
+                  "    console.log('Saved bearer access token.');",
+                  "}",
+                  "if (json.refresh_token) {",
+                  "    pm.environment.set('refreshToken', json.refresh_token);",
+                  "    console.log('Saved bearer refresh token.');",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2. Get Current User Profile (Me)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "me"
+              ]
+            },
+            "description": "Returns current user profile, resolved support role (admin/l1/l2), and assigned workspace/pipeline IDs."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "const json = pm.response.json();",
+                  "pm.test('Has email and role', function () {",
+                  "    pm.expect(json).to.have.property('email');",
+                  "    pm.expect(json).to.have.property('role');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3. Get My Pipeline Assignments",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/my-assignments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "my-assignments"
+              ]
+            },
+            "description": "Returns pipeline-level SLA assignments where the caller is the L1 or L2 assignee (or all if admin)."
+          }
+        },
+        {
+          "name": "4. Refresh JWT Token",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh_token\": \"{{refreshToken}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/jwt/refresh",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "jwt",
+                "refresh"
+              ]
+            },
+            "description": "Rotates refresh token and generates a new access token without re-entering credentials."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "const json = pm.response.json();",
+                  "if (json.access_token) {",
+                  "    pm.environment.set('token', json.access_token);",
+                  "}",
+                  "if (json.refresh_token) {",
+                  "    pm.environment.set('refreshToken', json.refresh_token);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "5. Entra ID SSO Exchange",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id_token\": \"{{entraIdToken}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/entra-id/exchange",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "entra-id",
+                "exchange"
+              ]
+            },
+            "description": "Exchanges an Entra ID (Azure AD) OIDC id_token for a local JWT token pair."
+          }
+        },
+        {
+          "name": "6. Logout User",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/jwt/logout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "jwt",
+                "logout"
+              ]
+            },
+            "description": "Revokes all refresh tokens for the current user session."
+          }
+        }
+      ]
+    },
+    {
+      "name": "02. Entra ID Directory Search",
+      "item": [
+        {
+          "name": "1. Search Entra ID Users (Directory Service)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/directory/users?query=support&top=15",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "directory",
+                "users"
+              ],
+              "query": [
+                {
+                  "key": "query",
+                  "value": "support"
+                },
+                {
+                  "key": "top",
+                  "value": "15"
+                }
+              ]
+            },
+            "description": "Searches Microsoft Entra ID (Azure AD) directory for users by name or email."
+          }
+        },
+        {
+          "name": "2. Search Entra ID Users (Prefix Search)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/directory/users/search?q=support&limit=15",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "directory",
+                "users",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "support"
+                },
+                {
+                  "key": "limit",
+                  "value": "15"
+                }
+              ]
+            },
+            "description": "Prefix search for Entra ID directory users."
+          }
+        }
+      ]
+    },
+    {
+      "name": "03. Admin Setup - Users & Role Management",
+      "item": [
+        {
+          "name": "1. List Configurable Roles",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/roles",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "roles"
+              ]
+            },
+            "description": "Lists system support roles (l1, l2) and descriptions."
+          }
+        },
+        {
+          "name": "2. List Configured Users",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "users"
+              ]
+            },
+            "description": "Fetches all configured team users, roles, and administrative roster."
+          }
+        },
+        {
+          "name": "3. Add L1 Support User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{l1Email}}\",\n  \"display_name\": \"L1 Support Specialist\",\n  \"role_id\": \"l1\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "users"
+              ]
+            },
+            "description": "Admin setup: Register a new L1 support engineer."
+          }
+        },
+        {
+          "name": "4. Add L2 Escalation Owner",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{l2Email}}\",\n  \"display_name\": \"L2 Escalation Manager\",\n  \"role_id\": \"l2\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/users",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "users"
+              ]
+            },
+            "description": "Admin setup: Register a new L2 escalation manager."
+          }
+        },
+        {
+          "name": "5. Update User Support Role",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{l1Email}}\",\n  \"role_id\": \"l2\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/users/role",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "users",
+                "role"
+              ]
+            },
+            "description": "Assign or modify an existing user's support role (l1 or l2)."
+          }
+        },
+        {
+          "name": "6. List All Workspace Assignments",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/assignments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "assignments"
+              ]
+            },
+            "description": "Fetches all pipeline-level SLA assignments across all workspaces (Admin only)."
+          }
+        },
+        {
+          "name": "7. Remove User from Support Roster",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/users/{{l1Email}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "admin",
+                "users",
+                "{{l1Email}}"
+              ]
+            },
+            "description": "Delete a support engineer from the roster."
+          }
+        }
+      ]
+    },
+    {
+      "name": "04. Workspaces & Pipelines Catalog",
+      "item": [
+        {
+          "name": "1. List Accessible Workspaces",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/workspaces",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "workspaces"
+              ]
+            },
+            "description": "Lists all workspaces from Microsoft Fabric enriched with SLA assignment counts. Only loads data when workspace is selected."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const list = pm.response.json();",
+                  "if (Array.isArray(list) && list.length > 0) {",
+                  "    pm.environment.set('workspaceId', list[0].id);",
+                  "    console.log('Set workspaceId to: ' + list[0].id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2. List Master & Independent Pipelines",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/workspaces/{{workspaceId}}/pipelines?parent_only=true",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "workspaces",
+                "{{workspaceId}}",
+                "pipelines"
+              ],
+              "query": [
+                {
+                  "key": "parent_only",
+                  "value": "true"
+                }
+              ]
+            },
+            "description": "Returns top-level master orchestrators and independent pipelines for the selected workspace."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const list = pm.response.json();",
+                  "if (Array.isArray(list) && list.length > 0) {",
+                  "    const p = list[0];",
+                  "    pm.environment.set('pipelineId', p.pipelineId || p.id);",
+                  "    pm.environment.set('pipelineName', p.pipelineName || p.name);",
+                  "    console.log('Set pipelineId to: ' + (p.pipelineId || p.id));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3. List All Pipelines (Including Sub-Pipelines)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/workspaces/{{workspaceId}}/pipelines?parent_only=false",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "workspaces",
+                "{{workspaceId}}",
+                "pipelines"
+              ],
+              "query": [
+                {
+                  "key": "parent_only",
+                  "value": "false"
+                }
+              ]
+            },
+            "description": "Returns all pipelines including child sub-pipelines invoked by ExecutePipeline activities."
+          }
+        },
+        {
+          "name": "4. List Parent Pipelines with SLA Config",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/workspaces/{{workspaceId}}/parent-pipelines",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "workspaces",
+                "{{workspaceId}}",
+                "parent-pipelines"
+              ]
+            },
+            "description": "Returns parent pipelines enriched with configured SLA thresholds."
+          }
+        },
+        {
+          "name": "5. List Pipeline Team & Domain Assignments",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/workspaces/{{workspaceId}}/pipeline-assignments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "workspaces",
+                "{{workspaceId}}",
+                "pipeline-assignments"
+              ]
+            },
+            "description": "Returns all parent pipelines with their per-pipeline Domain, L1, and L2 assignees."
+          }
+        },
+        {
+          "name": "6. List Workspace Pipeline Schedules",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/workspaces/{{workspaceId}}/schedules",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "workspaces",
+                "{{workspaceId}}",
+                "schedules"
+              ]
+            },
+            "description": "Returns all configured pipeline schedules across the entire workspace."
+          }
+        }
+      ]
+    },
+    {
+      "name": "05. SLA & Domain Configuration",
+      "item": [
+        {
+          "name": "1. Configure Pipeline SLA & Domain",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pipelineName\": \"{{pipelineName}}\",\n  \"l1Email\": \"{{l1Email}}\",\n  \"l1Name\": \"L1 Support Specialist\",\n  \"l2Email\": \"{{l2Email}}\",\n  \"l2Name\": \"L2 Escalation Manager\",\n  \"sla1Minutes\": 30,\n  \"sla2Minutes\": 60,\n  \"domain\": \"{{domain}}\",\n  \"enabled\": true,\n  \"assignedBy\": \"Admin\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/workspaces/{{workspaceId}}/pipelines/{{pipelineId}}/sla",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "workspaces",
+                "{{workspaceId}}",
+                "pipelines",
+                "{{pipelineId}}",
+                "sla"
+              ]
+            },
+            "description": "Admin setup: Configures pipeline SLA thresholds (SLA1 warning, SLA2 breach), team assignees (L1, L2), and Domain classification. L1 and L2 can be different engineers or the same person. Administrators assigned to L1 retain full unrestricted tenant access on login."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('SLA & Domain saved successfully (200)', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "const json = pm.response.json();",
+                  "pm.test('Contains domain and SLA thresholds', function () {",
+                  "    pm.expect(json).to.have.property('domain');",
+                  "    pm.expect(json).to.have.property('sla1Minutes');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2. Get Pipeline SLA & Domain Config",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/workspaces/{{workspaceId}}/pipelines/{{pipelineId}}/sla",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "workspaces",
+                "{{workspaceId}}",
+                "pipelines",
+                "{{pipelineId}}",
+                "sla"
+              ]
+            },
+            "description": "Retrieves configured SLA warning/breach thresholds, assigned L1/L2 contacts, and Domain."
+          }
+        },
+        {
+          "name": "3. Send Pipeline Test Alert Email",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{l1Email}}\",\n  \"role\": \"L1\",\n  \"pipelineName\": \"{{pipelineName}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/workspaces/{{workspaceId}}/pipelines/{{pipelineId}}/test-email",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "workspaces",
+                "{{workspaceId}}",
+                "pipelines",
+                "{{pipelineId}}",
+                "test-email"
+              ]
+            },
+            "description": "Sends a verification alert email to test SMTP mail dispatch for the pipeline."
+          }
+        }
+      ]
+    },
+    {
+      "name": "06. Pipeline Execution & Real-Time Monitoring",
+      "item": [
+        {
+          "name": "1. Trigger Pipeline Run On-Demand",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/workspaces/{{workspaceId}}/pipelines/{{pipelineId}}/run",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "workspaces",
+                "{{workspaceId}}",
+                "pipelines",
+                "{{pipelineId}}",
+                "run"
+              ]
+            },
+            "description": "Triggers an on-demand execution of the pipeline in Microsoft Fabric. Dispatches Celery fast sync and pushes live WebSocket update."
+          }
+        },
+        {
+          "name": "2. Get Snapshot: Latest Runs Preset",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/workspaces/{{workspaceId}}/snapshot?date_preset=latest",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "workspaces",
+                "{{workspaceId}}",
+                "snapshot"
+              ],
+              "query": [
+                {
+                  "key": "date_preset",
+                  "value": "latest"
+                }
+              ]
+            },
+            "description": "Returns real-time execution tree with 1 row per pipeline showing ONLY its latest run and SLA status."
+          }
+        },
+        {
+          "name": "3. Get Snapshot Filter: Today",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/workspaces/{{workspaceId}}/snapshot?date_preset=today",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "workspaces",
+                "{{workspaceId}}",
+                "snapshot"
+              ],
+              "query": [
+                {
+                  "key": "date_preset",
+                  "value": "today"
+                }
+              ]
+            },
+            "description": "Returns execution snapshot for runs occurring today."
+          }
+        },
+        {
+          "name": "4. Get Snapshot Filter: Yesterday",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/workspaces/{{workspaceId}}/snapshot?date_preset=yesterday",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "workspaces",
+                "{{workspaceId}}",
+                "snapshot"
+              ],
+              "query": [
+                {
+                  "key": "date_preset",
+                  "value": "yesterday"
+                }
+              ]
+            },
+            "description": "Returns execution snapshot for runs occurring yesterday."
+          }
+        },
+        {
+          "name": "5. Get Snapshot Filter: Past 7 Days",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/workspaces/{{workspaceId}}/snapshot?date_preset=7d",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "workspaces",
+                "{{workspaceId}}",
+                "snapshot"
+              ],
+              "query": [
+                {
+                  "key": "date_preset",
+                  "value": "7d"
+                }
+              ]
+            },
+            "description": "Returns execution snapshot for runs occurring in the past 7 days."
+          }
+        },
+        {
+          "name": "6. Get Snapshot Filter: Past 30 Days",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/workspaces/{{workspaceId}}/snapshot?date_preset=30d",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "workspaces",
+                "{{workspaceId}}",
+                "snapshot"
+              ],
+              "query": [
+                {
+                  "key": "date_preset",
+                  "value": "30d"
+                }
+              ]
+            },
+            "description": "Returns execution snapshot for runs occurring in the past 30 days."
+          }
+        },
+        {
+          "name": "7. Get Snapshot Filter: Custom Date Range",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/workspaces/{{workspaceId}}/snapshot?date_preset=custom&start_date=2026-10-01&end_date=2026-10-05",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "workspaces",
+                "{{workspaceId}}",
+                "snapshot"
+              ],
+              "query": [
+                {
+                  "key": "date_preset",
+                  "value": "custom"
+                },
+                {
+                  "key": "start_date",
+                  "value": "2026-10-01"
+                },
+                {
+                  "key": "end_date",
+                  "value": "2026-10-05"
+                }
+              ]
+            },
+            "description": "Filters execution runs within custom start and end calendar dates."
+          }
+        },
+        {
+          "name": "8. Get Hierarchical Run Tree",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/workspaces/{{workspaceId}}/tree",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "workspaces",
+                "{{workspaceId}}",
+                "tree"
+              ]
+            },
+            "description": "Returns full hierarchical tree with nested sub-pipelines and activities."
+          }
+        },
+        {
+          "name": "9. Get Chronological Pipeline Run History",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/workspaces/{{workspaceId}}/pipelines/{{pipelineId}}/history",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "workspaces",
+                "{{workspaceId}}",
+                "pipelines",
+                "{{pipelineId}}",
+                "history"
+              ]
+            },
+            "description": "Returns all historical execution runs for the selected pipeline."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const history = pm.response.json();",
+                  "if (Array.isArray(history) && history.length > 0) {",
+                  "    const run = history[0];",
+                  "    pm.environment.set('runId', run.runId || run.id);",
+                  "    console.log('Set runId to: ' + (run.runId || run.id));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "10. Get Granular Activity Runs",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/workspaces/{{workspaceId}}/pipelines/{{pipelineId}}/runs/{{runId}}/activities",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "workspaces",
+                "{{workspaceId}}",
+                "pipelines",
+                "{{pipelineId}}",
+                "runs",
+                "{{runId}}",
+                "activities"
+              ]
+            },
+            "description": "Retrieves granular activity executions and step diagnostics for a specific run instance."
+          }
+        },
+        {
+          "name": "11. Get Pipeline Schedule",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/workspaces/{{workspaceId}}/pipelines/{{pipelineId}}/schedule",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "workspaces",
+                "{{workspaceId}}",
+                "pipelines",
+                "{{pipelineId}}",
+                "schedule"
+              ]
+            },
+            "description": "Returns schedule and trigger configuration for a pipeline."
+          }
+        },
+        {
+          "name": "12. Get Pipeline Schedules (Alias)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/workspaces/{{workspaceId}}/pipelines/{{pipelineId}}/schedules",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "workspaces",
+                "{{workspaceId}}",
+                "pipelines",
+                "{{pipelineId}}",
+                "schedules"
+              ]
+            },
+            "description": "Alias for schedules configured on a specific pipeline."
+          }
+        }
+      ]
+    },
+    {
+      "name": "07. SLA Incidents & Escalation Workflow",
+      "item": [
+        {
+          "name": "1. List Workspace Incidents",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/workspaces/{{workspaceId}}/incidents",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "workspaces",
+                "{{workspaceId}}",
+                "incidents"
+              ]
+            },
+            "description": "Fetches all active, escalated, and resolved SLA incidents for this workspace."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const res = pm.response.json();",
+                  "const incs = res.incidents || res;",
+                  "if (Array.isArray(incs) && incs.length > 0) {",
+                  "    pm.environment.set('incidentId', incs[0].id || incs[0].incidentId);",
+                  "    console.log('Set incidentId to: ' + (incs[0].id || incs[0].incidentId));",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2. Resolve Workspace Incident",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"resolvedBy\": \"Admin Operator\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/workspaces/{{workspaceId}}/incidents/{{incidentId}}/resolve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "workspaces",
+                "{{workspaceId}}",
+                "incidents",
+                "{{incidentId}}",
+                "resolve"
+              ]
+            },
+            "description": "Marks an active or escalated SLA incident as resolved and broadcasts resolution to the workspace."
+          }
+        },
+        {
+          "name": "3. List All Active Incidents (Cross-Workspace)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/workspaces/incidents",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "workspaces",
+                "incidents"
+              ]
+            },
+            "description": "Returns all active SLA warnings and escalated incidents across the entire tenant."
+          }
+        },
+        {
+          "name": "4. Resolve Global Incident",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"resolvedBy\": \"Global Lead\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/workspaces/incidents/{{incidentId}}/resolve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "workspaces",
+                "incidents",
+                "{{incidentId}}",
+                "resolve"
+              ]
+            },
+            "description": "Marks an incident as resolved via the cross-workspace global endpoint."
+          }
+        }
+      ]
+    },
+    {
+      "name": "08. AI Diagnostics (Azure OpenAI GPT-4o)",
+      "item": [
+        {
+          "name": "1. Diagnose Pipeline Error with Azure OpenAI GPT-4o",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pipelineName\": \"{{pipelineName}}\",\n  \"activityName\": \"CopyDataActivity\",\n  \"activityType\": \"Copy\",\n  \"errorCode\": \"22001\",\n  \"errorMessage\": \"Value too long for character varying(50) in column customer_address\",\n  \"failureType\": \"UserError\",\n  \"forceRefresh\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/diagnostics/ai-fix",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "diagnostics",
+                "ai-fix"
+              ]
+            },
+            "description": "Analyzes error message with Azure OpenAI GPT-4o. Returns root cause, severity, remediation checklist, and copyable SQL / PySpark fix script."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('AI Diagnostics status is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "const json = pm.response.json();",
+                  "pm.test('Includes root cause diagnosis', function () {",
+                  "    pm.expect(json).to.have.property('rootCause');",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2. Workspace-Scoped AI Diagnostics",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pipelineName\": \"{{pipelineName}}\",\n  \"activityName\": \"TransferData\",\n  \"activityType\": \"Copy\",\n  \"errorCode\": \"LoginFailed\",\n  \"errorMessage\": \"Cannot open database requested by the login. The login failed.\",\n  \"failureType\": \"SystemError\",\n  \"forceRefresh\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/workspaces/{{workspaceId}}/diagnostics/ai-fix",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "workspaces",
+                "{{workspaceId}}",
+                "diagnostics",
+                "ai-fix"
+              ]
+            },
+            "description": "Performs AI error diagnosis within workspace context."
+          }
+        }
+      ]
+    },
+    {
+      "name": "09. Lakehouse Table Logs & SQL Metadata",
+      "item": [
+        {
+          "name": "1. List Workspace Data Artifacts (Lakehouse & Warehouse)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/workspaces/{{workspaceId}}/data-artifacts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "workspaces",
+                "{{workspaceId}}",
+                "data-artifacts"
+              ]
+            },
+            "description": "Discovers all Warehouses and Lakehouses inside the workspace with SQL connection endpoints."
+          }
+        },
+        {
+          "name": "2. Discover Lakehouse Delta Tables",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/workspaces/{{workspaceId}}/table-logs/tables?refresh=true",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "workspaces",
+                "{{workspaceId}}",
+                "table-logs",
+                "tables"
+              ],
+              "query": [
+                {
+                  "key": "refresh",
+                  "value": "true"
+                }
+              ]
+            },
+            "description": "Discovers available delta tables from workspace Lakehouse / Warehouse."
+          }
+        },
+        {
+          "name": "3. List SQL Endpoint Schemas & Tables",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"serverFqdn\": \"{{serverFqdn}}\",\n  \"databaseName\": \"{{databaseName}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/workspaces/{{workspaceId}}/sql-metadata/tables",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "workspaces",
+                "{{workspaceId}}",
+                "sql-metadata",
+                "tables"
+              ]
+            },
+            "description": "Queries Fabric SQL endpoint for all user schemas and tables."
+          }
+        },
+        {
+          "name": "4. List SQL Table Columns & Data Types",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"serverFqdn\": \"{{serverFqdn}}\",\n  \"databaseName\": \"{{databaseName}}\",\n  \"schemaName\": \"dbo\",\n  \"tableName\": \"{{tableName}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/workspaces/{{workspaceId}}/sql-metadata/columns",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "workspaces",
+                "{{workspaceId}}",
+                "sql-metadata",
+                "columns"
+              ]
+            },
+            "description": "Fetches columns, types, and nullability for selected SQL schema and table."
+          }
+        },
+        {
+          "name": "5. Test SQL Endpoint Connection",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"server\": \"{{serverFqdn}}\",\n  \"database\": \"{{databaseName}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/workspaces/{{workspaceId}}/table-logs/test-connection",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "workspaces",
+                "{{workspaceId}}",
+                "table-logs",
+                "test-connection"
+              ]
+            },
+            "description": "Validates connectivity to Fabric SQL Endpoint."
+          }
+        },
+        {
+          "name": "6. Get Table Log Mapping Config",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/workspaces/{{workspaceId}}/table-log-mapping",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "workspaces",
+                "{{workspaceId}}",
+                "table-log-mapping"
+              ]
+            },
+            "description": "Fetches saved table log and column mapping configuration."
+          }
+        },
+        {
+          "name": "7. Save Table Log Mapping Config",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"artifactType\": \"Lakehouse\",\n  \"artifactId\": \"{{lakehouseId}}\",\n  \"artifactName\": \"Lakehouse_Bronze\",\n  \"serverFqdn\": \"{{serverFqdn}}\",\n  \"databaseName\": \"{{databaseName}}\",\n  \"batchHeaderSchema\": \"dbo\",\n  \"batchHeaderTable\": \"BatchExecutionHeader\",\n  \"batchHeaderMapping\": {\n    \"batch_id\": \"BatchId\",\n    \"pipeline_name\": \"PipelineName\",\n    \"status\": \"Status\"\n  },\n  \"bronzeSchema\": \"dbo\",\n  \"bronzeTable\": \"RawIngestionLog\",\n  \"bronzeMapping\": {\n    \"batch_id\": \"BatchId\",\n    \"table_name\": \"TableName\",\n    \"rows_read\": \"RowsRead\",\n    \"rows_written\": \"RowsWritten\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/workspaces/{{workspaceId}}/table-log-mapping",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "workspaces",
+                "{{workspaceId}}",
+                "table-log-mapping"
+              ]
+            },
+            "description": "Persists audit table and column mappings in SQLite."
+          }
+        },
+        {
+          "name": "8. Delete Table Log Mapping",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/api/workspaces/{{workspaceId}}/table-log-mapping",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "workspaces",
+                "{{workspaceId}}",
+                "table-log-mapping"
+              ]
+            },
+            "description": "Resets/clears the saved table log mapping for the workspace."
+          }
+        },
+        {
+          "name": "9. Get Table Log Storage Config",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/workspaces/{{workspaceId}}/table-logs/config",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "workspaces",
+                "{{workspaceId}}",
+                "table-logs",
+                "config"
+              ]
+            },
+            "description": "Retrieves saved table log column mapping configuration."
+          }
+        },
+        {
+          "name": "10. Save Table Log Storage Config",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"batchHeaderTable\": \"BatchExecutionHeader\",\n  \"batchDetailsTable\": \"BatchExecutionDetails\",\n  \"logStorageType\": \"lakehouse\",\n  \"lakehouseId\": \"{{lakehouseId}}\",\n  \"columnMappings\": {\n    \"batchId\": \"BatchId\",\n    \"status\": \"Status\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/workspaces/{{workspaceId}}/table-logs/config",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "workspaces",
+                "{{workspaceId}}",
+                "table-logs",
+                "config"
+              ]
+            },
+            "description": "Saves table log column mappings."
+          }
+        },
+        {
+          "name": "11. Query Table-Level Logs (KPIs & Lineage)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/workspaces/{{workspaceId}}/table-logs?batch_id={{batchId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "workspaces",
+                "{{workspaceId}}",
+                "table-logs"
+              ],
+              "query": [
+                {
+                  "key": "batch_id",
+                  "value": "{{batchId}}"
+                }
+              ]
+            },
+            "description": "Queries table-level audit telemetry (KPIs, Bronze/Silver layer overviews)."
+          }
+        },
+        {
+          "name": "12. Get Batch Execution Headers",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/workspaces/{{workspaceId}}/table-logs/headers?limit=50",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "workspaces",
+                "{{workspaceId}}",
+                "table-logs",
+                "headers"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "50"
+                }
+              ]
+            },
+            "description": "Fetches batch execution headers from Lakehouse / Warehouse."
+          }
+        },
+        {
+          "name": "13. Force Refresh Batch Headers",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/api/workspaces/{{workspaceId}}/table-logs/refresh-headers?limit=50",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "workspaces",
+                "{{workspaceId}}",
+                "table-logs",
+                "refresh-headers"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "50"
+                }
+              ]
+            },
+            "description": "Forces active sync of batch headers from Lakehouse SQL endpoint."
+          }
+        },
+        {
+          "name": "14. Get Batch Activity Details & Step Metrics",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/workspaces/{{workspaceId}}/table-logs/details?batch_id={{batchId}}&limit=100",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "workspaces",
+                "{{workspaceId}}",
+                "table-logs",
+                "details"
+              ],
+              "query": [
+                {
+                  "key": "batch_id",
+                  "value": "{{batchId}}"
+                },
+                {
+                  "key": "limit",
+                  "value": "100"
+                }
+              ]
+            },
+            "description": "Fetches activity-level step metrics and timing for a batch."
+          }
+        },
+        {
+          "name": "15. Preview Table Rows",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/workspaces/{{workspaceId}}/table-logs/table-preview?table_name={{tableName}}&limit=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "workspaces",
+                "{{workspaceId}}",
+                "table-logs",
+                "table-preview"
+              ],
+              "query": [
+                {
+                  "key": "table_name",
+                  "value": "{{tableName}}"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Fetches top N preview rows from delta table."
+          }
+        },
+        {
+          "name": "16. Table Log Diagnostic & Health Check",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/workspaces/{{workspaceId}}/table-logs/diagnostic",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "workspaces",
+                "{{workspaceId}}",
+                "table-logs",
+                "diagnostic"
+              ]
+            },
+            "description": "Performs diagnostic connectivity and health checks for table log storage."
+          }
+        }
+      ]
+    },
+    {
+      "name": "10. WebSocket Real-Time Telemetry",
+      "item": [
+        {
+          "name": "1. Connect Workspace Live Telemetry (WebSocket)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{wsBaseUrl}}/ws/workspaces/{{workspaceId}}",
+              "host": [
+                "{{wsBaseUrl}}"
+              ],
+              "path": [
+                "ws",
+                "workspaces",
+                "{{workspaceId}}"
+              ]
+            },
+            "description": "Connects to real-time WebSocket broadcast channel for the selected workspace. Instantly returns FULL_SNAPSHOT and streams live status updates, ticking duration counters, and incident alerts."
+          }
+        }
+      ]
+    }
+  ]
+}
