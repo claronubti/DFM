@@ -1,0 +1,32 @@
+# Redis broker for Celery async task offloading.
+#
+# Start Redis:  docker compose up -d
+# Stop Redis:   docker compose down
+#
+# Celery Worker (Run locally on Windows):
+#   On Windows, Celery worker must run natively in the virtual environment
+#   (not in Docker) because SQLite (fabric_monitor.db) cannot share file locks
+#   and shared memory (-shm/-wal) across Docker Windows-Linux volume mounts:
+#
+#     .\run_celery.bat
+#     OR:
+#     celery -A app.core.celery_app.celery_app worker -P threads --concurrency=4 --loglevel=info
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: fabric_monitor_redis
+    ports:
+      - "6379:6379"
+    command: ["redis-server", "--appendonly", "yes", "--save", "60", "1"]
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  redis_data:

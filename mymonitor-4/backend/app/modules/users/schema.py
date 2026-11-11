@@ -1,0 +1,113 @@
+"""Pydantic schemas for the unified users and user-setup management module."""
+
+import uuid
+from datetime import datetime
+from typing import Optional, List
+from pydantic import BaseModel, EmailStr, Field
+
+
+# ---- FastAPI Users Base Schemas ----
+class UserBase(BaseModel):
+    """Base Pydantic schema for user account attributes and authorization flags."""
+    email: EmailStr
+    is_active: bool = True
+    is_superuser: bool = False
+    is_verified: bool = False
+
+
+class UserRead(UserBase):
+    """Pydantic schema returned when reading user profiles with IDs and audit timestamps."""
+    id: uuid.UUID
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class UserUpdate(BaseModel):
+    """Payload schema for partially updating mutable user properties."""
+    email: EmailStr | None = None
+    is_active: bool | None = None
+    is_superuser: bool | None = None
+    is_verified: bool | None = None
+
+
+# ---- Fabric Monitoring RBAC & User Management Schemas ----
+class RoleResponse(BaseModel):
+    """Schema representing an RBAC authorization role definition."""
+    id: str
+    name: str
+    description: Optional[str] = None
+
+
+class UserResponse(BaseModel):
+    """Detailed response schema for a registered operator or personnel profile."""
+    email: str
+    display_name: Optional[str] = None
+    oid: Optional[str] = None
+    role_id: Optional[str] = None
+    role_name: Optional[str] = None
+    is_active: bool = True
+    created_at: Optional[str] = None
+    last_login_at: Optional[str] = None
+
+
+class AddUserRequest(BaseModel):
+    """Payload schema for admin-provisioned L1 or L2 user creation."""
+    email: str
+    display_name: Optional[str] = None
+    oid: Optional[str] = None
+    role_id: str  # 'l1' or 'l2'
+
+
+class SetRoleRequest(BaseModel):
+    """Payload schema for updating an existing user's RBAC role assignment."""
+    email: str
+    role_id: str  # 'l1' or 'l2'
+
+
+class UsersListResponse(BaseModel):
+    """Aggregated response containing registered users and system role definitions."""
+    users: List[UserResponse]
+    roles: List[RoleResponse]
+
+
+class UserProfile(BaseModel):
+    """Authenticated user profile with active role and scoped workspace/pipeline IDs."""
+    email: str
+    name: Optional[str] = None
+    oid: Optional[str] = None
+    role: str = "none"  # admin | l1 | l2 | none
+    is_admin: bool = False
+    assigned_workspace_ids: List[str] = Field(default_factory=list)
+    assigned_pipeline_ids: List[str] = Field(default_factory=list)
+
+
+# ---- Pipeline-level SLA Assignment Schemas ----
+class SlaAssignment(BaseModel):
+    """Represents an L1/L2 pipeline-level SLA assignment from sla_configs."""
+    pipeline_id: str
+    workspace_id: Optional[str] = None
+    pipeline_name: Optional[str] = None
+    l1_email: Optional[str] = None
+    l2_email: Optional[str] = None
+    l1_name: Optional[str] = None
+    l2_name: Optional[str] = None
+    sla1_minutes: int = 30
+    sla2_minutes: int = 60
+    assigned_by: Optional[str] = None
+    updated_at: Optional[str] = None
+
+
+__all__ = [
+    "UserBase",
+    "UserRead",
+    "UserUpdate",
+    "RoleResponse",
+    "UserResponse",
+    "AddUserRequest",
+    "SetRoleRequest",
+    "UsersListResponse",
+    "UserProfile",
+    "SlaAssignment",
+]
